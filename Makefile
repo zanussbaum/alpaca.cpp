@@ -176,7 +176,7 @@ $(info I CC:       $(CCV))
 $(info I CXX:      $(CXXV))
 $(info )
 
-default: chat quantize
+default: chat quantize piper
 
 #
 # Build library
@@ -191,8 +191,14 @@ utils.o: utils.cpp utils.h
 clean:
 	rm -f *.o main quantize
 
+tunnel: chat.cpp ggml.o utils.o
+	$(CXX) $(CXXFLAGS) chat.cpp ggml.o utils.o -o chat $(LDFLAGS)
+
 chat: chat.cpp ggml.o utils.o
 	$(CXX) $(CXXFLAGS) chat.cpp ggml.o utils.o -o chat $(LDFLAGS)
+
+piper: chat
+	cp chat piper
 
 chat_mac: chat.cpp ggml.c utils.cpp
 	$(CC)  $(CFLAGS)   -c ggml.c -o ggml_x86.o -target x86_64-apple-macos
