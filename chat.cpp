@@ -1051,7 +1051,7 @@ int main(int argc, char ** argv) {
                 }
 
                 if (!sequence_found) {
-                    printf("%s[%i] ", vocab.id_to_token[id].c_str(), id);
+                    printf("%s", vocab.id_to_token[id].c_str());
                 }
                 fflush(stdout);
             }
