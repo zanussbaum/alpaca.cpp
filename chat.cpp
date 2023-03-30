@@ -320,7 +320,7 @@ bool llama_model_load(const std::string & fname, llama_model & model, gpt_vocab 
     fin.close();
 
     std::vector<uint8_t> tmp;
-    
+
     for (int i = 0; i < n_parts; ++i) {
         const int part_id = i;
         //const int part_id = n_parts - i - 1;
@@ -825,7 +825,7 @@ int main(int argc, char ** argv) {
     // load the model
     {
         const int64_t t_start_us = ggml_time_us();
-        if (!llama_model_load(params.model, model, vocab, params.n_ctx)) {  
+        if (!llama_model_load(params.model, model, vocab, params.n_ctx)) {
             fprintf(stderr, "%s: failed to load model from '%s'\n", __func__, params.model.c_str());
             return 1;
         }
@@ -946,7 +946,17 @@ int main(int argc, char ** argv) {
         printf(ANSI_COLOR_YELLOW);
     }
 
-    
+    // remove token 1 from prompt_inp
+    std::vector<gpt_vocab::id> prompt_inp_sequence;
+    prompt_inp_sequence = std::vector<gpt_vocab::id>(prompt_inp.begin() + 1, prompt_inp.end());
+
+    std::vector<std::vector<gpt_vocab::id>> instruct_sequences = { // token sequences to look for in output
+        prompt_inp_sequence,
+        response_inp
+    };
+
+    // Initialize a vector to track the progress of each target sequence
+    std::vector<int> instruct_indices(instruct_sequences.size(), 0);
 
     while (remaining_tokens > 0) {
         // predict
@@ -1016,10 +1026,35 @@ int main(int argc, char ** argv) {
 
         // display text
         if (!input_noecho) {
-            for (auto id : embd) {
-                printf("%s", vocab.id_to_token[id].c_str());
+            for (size_t i = 0; i < embd.size(); ++i) {
+                gpt_vocab::id id = embd[i];
+                bool sequence_found = false;
+
+                for (size_t j = 0; j < instruct_sequences.size(); ++j) {
+                    if (id == instruct_sequences[j][instruct_indices[j]]) {
+                        instruct_indices[j]++;
+                        if (instruct_indices[j] == instruct_sequences[j].size()) { // If we have found the full instruct_sequence stop printing
+                            printf("\n");
+                            is_interacting = true;
+                            i += instruct_sequences[j].size() - 1; // Skip the rest of the found target sequence
+                            sequence_found = true;
+                            continue;
+                        }
+                    } else {
+                        // Handle partial match cases
+                        if (instruct_indices[j] > 0) {
+                            i -= instruct_indices[j]; // Move back by instruct_indices[j] steps
+                            instruct_indices[j] = 0;
+                            break;
+                        }
+                    }
+                }
+
+                if (!sequence_found) {
+                    printf("%s[%i] ", vocab.id_to_token[id].c_str(), id);
+                }
+                fflush(stdout);
             }
-            fflush(stdout);
         }
 
         // in interactive mode, and not currently processing queued inputs;
@@ -1035,7 +1070,7 @@ int main(int argc, char ** argv) {
                 // embd_inp.erase(embd_inp.begin());
                 input_consumed = embd_inp.size();
                 embd_inp.insert(embd_inp.end(), prompt_inp.begin(), prompt_inp.end());
-                
+
 
                 printf("\n> ");
 
