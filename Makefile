@@ -62,7 +62,10 @@ endif
 #       feel free to update the Makefile for your architecture and send a pull request or issue
 ifeq ($(UNAME_M),$(filter $(UNAME_M),x86_64 i686))
 	ifeq ($(UNAME_S),Darwin)
-		CFLAGS += -mf16c
+		F16C_M := $(shell sysctl machdep.cpu.features)
+		ifneq (,$(findstring F16C,$(F16C_M)))
+		    CFLAGS += -mf16c
+		endif
 		AVX1_M := $(shell sysctl machdep.cpu.features)
 		ifneq (,$(findstring FMA,$(AVX1_M)))
 			CFLAGS += -mfma
@@ -197,7 +200,7 @@ chat: chat.cpp ggml.o utils.o
 chat_mac: chat.cpp ggml.c utils.cpp
 	$(CC)  $(CFLAGS)   -c ggml.c -o ggml_x86.o -target x86_64-apple-macos
 	$(CC)  $(CFLAGS)   -c ggml.c -o ggml_arm.o -target arm64-apple-macos
-	
+
 	$(CXX) $(CXXFLAGS) chat.cpp ggml_x86.o utils.cpp -o chat_x86 $(LDFLAGS) -target x86_64-apple-macos
 	$(CXX) $(CXXFLAGS) chat.cpp ggml_arm.o utils.cpp -o chat_arm $(LDFLAGS) -target arm64-apple-macos
 	lipo -create -output chat_mac chat_x86 chat_arm
