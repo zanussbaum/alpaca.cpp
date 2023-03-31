@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <deque>
 
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
 #include <signal.h>
@@ -946,13 +947,16 @@ int main(int argc, char ** argv) {
         printf(ANSI_COLOR_YELLOW);
     }
 
-    // remove token 1 from prompt_inp
+    // remove token 1 from prompt_inp, and the last 2 tokens (line breaks) for each of prompt_inp and response_inp
     std::vector<gpt_vocab::id> prompt_inp_sequence;
-    prompt_inp_sequence = std::vector<gpt_vocab::id>(prompt_inp.begin() + 1, prompt_inp.end());
+    std::vector<gpt_vocab::id> response_inp_sequence;
+    prompt_inp_sequence = std::vector<gpt_vocab::id>(prompt_inp.begin() + 1, prompt_inp.end() - 2);
+    response_inp_sequence = std::vector<gpt_vocab::id>(response_inp.begin(), response_inp.end() - 2);
+
 
     std::vector<std::vector<gpt_vocab::id>> instruct_sequences = { // token sequences to look for in output
         prompt_inp_sequence,
-        response_inp
+        response_inp_sequence
     };
 
     // Initialize a vector to track the progress of each target sequence
@@ -1026,35 +1030,51 @@ int main(int argc, char ** argv) {
 
         // display text
         if (!input_noecho) {
-            for (size_t i = 0; i < embd.size(); ++i) {
-                gpt_vocab::id id = embd[i];
-                bool sequence_found = false;
+            std::deque<std::string> output_buffer;
+            bool sequence_found = false;
 
-                for (size_t j = 0; j < instruct_sequences.size(); ++j) {
+            size_t i = 0;
+            while (i < embd.size() && !sequence_found) {
+                gpt_vocab::id id = embd[i];
+                bool handled = false;
+
+                size_t j = 0;
+                while (j < instruct_sequences.size() && !handled) {
                     if (id == instruct_sequences[j][instruct_indices[j]]) {
                         instruct_indices[j]++;
+                        handled = true;
                         if (instruct_indices[j] == instruct_sequences[j].size()) { // If we have found the full instruct_sequence stop printing
-                            printf("\n");
-                            is_interacting = true;
                             i += instruct_sequences[j].size() - 1; // Skip the rest of the found target sequence
                             sequence_found = true;
-                            continue;
-                        }
-                    } else {
-                        // Handle partial match cases
-                        if (instruct_indices[j] > 0) {
-                            i -= instruct_indices[j]; // Move back by instruct_indices[j] steps
-                            instruct_indices[j] = 0;
+                            is_interacting = true;
                             break;
                         }
+                    } else if (instruct_indices[j] > 0) {
+                        // Handle partial match cases
+                        i -= instruct_indices[j] - 1;  // Move back by (instruct_indices[j] - 1) steps
+                        instruct_indices[j] = 0;
+                        handled = true;
+                        break;
+                    } else {
+                        j++; // Increment 'j' only when no match or partial match is found
                     }
                 }
 
-                if (!sequence_found) {
-                    printf("%s", vocab.id_to_token[id].c_str());
+                if (!handled) {
+                    output_buffer.push_back(vocab.id_to_token[id]);
                 }
+                i++;
                 fflush(stdout);
             }
+
+            // Flush the remaining elements in the buffer
+            while (!output_buffer.empty()) {
+                std::string output = output_buffer.front();
+                output_buffer.pop_front();
+                printf("%s", output.c_str());
+            }
+            fflush(stdout);
+
         }
 
         // in interactive mode, and not currently processing queued inputs;
@@ -1071,6 +1091,10 @@ int main(int argc, char ** argv) {
                 input_consumed = embd_inp.size();
                 embd_inp.insert(embd_inp.end(), prompt_inp.begin(), prompt_inp.end());
 
+                // clear all indices
+                for (size_t j = 0; j < instruct_indices.size(); ++j) {
+                    instruct_indices[j] = 0;
+                }
 
                 printf("\n> ");
 
