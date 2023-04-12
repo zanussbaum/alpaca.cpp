@@ -1,4 +1,4 @@
-# alpaca.cpp
+# GPT4All.cpp
 
 ## Changes to Alpaca.cpp Repository
 
