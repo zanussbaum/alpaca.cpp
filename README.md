@@ -29,6 +29,7 @@ Once you've downloaded the model weights and placed them into the same directory
 ```
 
 The weights are based on the published fine-tunes from `alpaca-lora`, converted back into a pytorch checkpoint with a [modified script](https://github.com/tloen/alpaca-lora/pull/19) and then quantized with llama.cpp the regular way. 
+The binaries updated to  can be found here: (https://huggingface.co/beingPurple/gpt4all-lora-quantized-new/blob/main/README.md)
 
 ## Building from Source (MacOS/Linux)
 
