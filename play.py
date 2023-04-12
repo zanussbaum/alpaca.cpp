@@ -22,23 +22,3 @@ print("===================")
 q = "{}".format( prompt)#, " ###Instruction: What happens next?")
 ask(q,n=200)
 
-'''
-TODO:
-- this is: llama.cpp running gpt4all (https://github.com/nomic-ai/gpt4all#gpt4all-compatibility-ecosystem)
-- lo-ra train on storytelling data
-- lo-ra train via TattleTale
-- generate RP pddl data (via self instruct)
-- generate Pathfinder 2E specific data
-- generate rolling pddl data
-- lo-ra train on pathfinder+rp+roll data combo
-
-== for personal assistant
-TODO: 
-- find previous checkpoint(guaranteed: ) (dream: )(or make custom ones??)
-- instruction train
-- lo-ra train on code
-- lo-ra train on wikipedia
-- re-quantize with new llama.cpp quantize (https://github.com/ggerganov/llama.cpp#using-gpt4all)
-- write bash script that takes a model name param, 
-  changes it to the right name, and starts up chat (and has a default)
-'''
